@@ -1,0 +1,312 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chat App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        /* --- RESET & VARS --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; padding: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; height: 100vh; overflow: hidden; user-select: none; }
+        :root { --primary: #008069; --white: #ffffff; --bg-chat: #efeae2; --bubble-me: #d9fdd3; --bubble-them: #ffffff; --fab: #00a884; --blue-tick: #34B7F1; }
+
+        /* --- SCREENS --- */
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); display: none; flex-direction: column; z-index: 10; }
+        .screen.active { display: flex; animation: slideIn 0.2s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        /* --- HEADER --- */
+        .header { background: var(--primary); color: white; padding: 16px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 20; }
+        .header h1 { font-size: 20px; margin: 0; font-weight: 500; }
+        .back-btn { font-size: 24px; margin-right: 20px; cursor: pointer; }
+
+        /* --- LOGIN --- */
+        .login-container { padding: 40px; display: flex; flex-direction: column; justify-content: center; height: 100%; }
+        input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; outline: none; }
+        input:focus { border-color: var(--primary); border-width: 2px; margin-bottom: 14px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+        /* --- CONTACTS --- */
+        .list-content { flex: 1; overflow-y: auto; position: relative; }
+        .contact-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.1s; }
+        .contact-item:active { background: #f5f5f5; }
+        .avatar { width: 50px; height: 50px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #555; margin-right: 15px; }
+        .info h3 { margin: 0 0 5px 0; font-size: 16px; color: #333; }
+        .info p { margin: 0; font-size: 13px; color: #888; }
+
+
+
+
+/* FLOATING ACTION BUTTON (FAB) */
+        .fab {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            width: 60px;
+            height: 60px;
+            /* WhatsApp-style Gradient */
+            background: linear-gradient(135deg, #25D366, #128C7E); 
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 300;
+            /* Deep shadow for floating depth */
+            box-shadow: 0 8px 20px rgba(18, 140, 126, 0.4);
+            cursor: pointer;
+            z-index: 100;
+            /* Smooth springy transition */
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            /* Continuous Pulse Animation */
+            animation: pulse-green 2s infinite;
+        }
+
+        /* Hover: Lift up, Glow, and Rotate slightly */
+        .fab:hover {
+            transform: translateY(-5px) scale(1.1) rotate(90deg);
+            box-shadow: 0 15px 30px rgba(18, 140, 126, 0.6);
+        }
+
+        /* Click: Press down */
+        .fab:active {
+            transform: scale(0.9) rotate(90deg);
+            box-shadow: 0 4px 10px rgba(18, 140, 126, 0.4);
+            transition: 0.1s;
+        }
+
+        /* Ripple Pulse Animation */
+        @keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 15px rgba(37, 211, 102, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+            }
+        }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: white; width: 85%; max-width: 320px; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: var(--primary); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+        .btn-text { background: none; border: none; color: var(--primary); font-weight: bold; cursor: pointer; padding: 10px; }
+
+        /* --- CHAT AREA --- */
+        .chat-bg { flex: 1; background-color: var(--bg-chat); background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        
+        /* Message Bubbles */
+        .msg { max-width: 75%; padding: 6px 7px 8px 9px; border-radius: 8px; font-size: 15px; line-height: 19px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .msg.me { align-self: flex-end; background: var(--bubble-me); border-top-right-radius: 0; }
+        .msg.them { align-self: flex-start; background: var(--bubble-them); border-top-left-radius: 0; }
+        
+        /* Time & Ticks container */
+        .meta { display: flex; align-items: center; justify-content: flex-end; margin-top: 2px; height: 15px; }
+        .time { font-size: 11px; color: rgba(0,0,0,0.45); margin-right: 4px; }
+        
+        /* Ticks CSS */
+        .ticks { display: none; font-size: 14px; line-height: 14px; }
+        .msg.me .ticks { display: inline-block; color: rgba(0,0,0,0.3); } /* Default Gray */
+        .msg.me.read .ticks { color: var(--blue-tick); } /* Blue when read */
+
+        /* Date Separator */
+        .date-badge { align-self: center; background: #d3ebf6; padding: 5px 12px; border-radius: 8px; font-size: 12px; color: #555; margin: 10px 0; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+
+        .footer { background: white; padding: 8px; display: flex; align-items: center; border-top: 1px solid #ddd; }
+        .footer input { margin: 0; border-radius: 20px; padding: 10px 15px; border: none; background: #f0f2f5; flex: 1; }
+        .send-icon { width: 45px; height: 45px; background: var(--primary); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; margin-left: 8px; cursor: pointer; font-size: 18px; }
+
+        /* SKELETON */
+        .skeleton { background: #f6f7f8; background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%); background-size: 800px 104px; animation: shimmer 1s linear infinite forwards; }
+        @keyframes shimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
+        .contact-skeleton { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
+        .sk-avatar { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; }
+        .sk-line { height: 14px; width: 60%; }
+    </style>
+</head>
+<body>
+
+    <div id="screen-login" class="screen active">
+        <div class="login-container">
+            <h2 style="color:var(--primary); text-align:center;">Welcome</h2>
+            <input type="text" id="loginName" placeholder="Your Name">
+            <input type="number" id="loginMobile" placeholder="Mobile Number">
+            <input type="text" id="loginDOB" placeholder="DOB (DDMMYYYY)">
+            <button class="btn" onclick="doLogin()">Login</button>
+            <p id="errorMsg" style="color:red; text-align:center; font-size:13px; margin-top:10px;"></p>
+        </div>
+    </div>
+
+    <div id="screen-contacts" class="screen">
+        <div class="header"><h1>PeChat</h1></div>
+        <div class="list-content" id="contactsList"></div>
+        <div class="fab" onclick="openAddModal()">+</div>
+    </div>
+
+    <div id="modal-add" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">New Chat</div>
+            <input type="number" id="newContactMobile" placeholder="Enter Mobile Number">
+            <p id="addStatus" style="font-size:12px; color:red; height:15px; margin:0 0 10px 0;"></p>
+            <div class="modal-actions">
+                <button class="btn-text" style="color:#666" onclick="closeAddModal()">Cancel</button>
+                <button class="btn-text" onclick="addNewContact()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-chat" class="screen">
+        <div class="header">
+            <div class="back-btn" onclick="showScreen('screen-contacts')">
+                <span class="material-icons">arrow_back</span>
+            </div>
+            <h1 id="chatTitle">User</h1>
+        </div>
+        <div class="chat-bg" id="chatContainer"></div>
+        <div class="footer">
+            <input type="text" id="msgInput" placeholder="Type a message...">
+            <div class="send-icon" onclick="sendMsg()">&#10148;</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbz1ZqHpLa00-eCpqvawKCdj-6SVzq2BpAxV9sTN5DckiXwYq-L8XkXk4eEVIERyFg49/exec"; 
+        
+        let currentUser = null;
+        let currentChatPartner = null;
+        let chatInterval = null;
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'screen-contacts') {
+                if(chatInterval) clearInterval(chatInterval);
+                loadContacts();
+            }
+        }
+
+        async function doLogin() {
+            const btn = document.querySelector('.btn');
+            const error = document.getElementById('errorMsg');
+            const mobile = document.getElementById('loginMobile').value;
+            const dob = document.getElementById('loginDOB').value;
+            const name = document.getElementById('loginName').value;
+            if(!mobile || !dob) { error.innerText = "Please fill all fields"; return; }
+            btn.innerText = "Processing...";
+            try {
+                const res = await fetch(`${API_URL}?action=login&mobile=${mobile}&dob=${dob}&name=${name}`).then(r => r.json());
+                if(res.status === 'success') {
+                    currentUser = res;
+                    showScreen('screen-contacts');
+                } else { error.innerText = res.message; btn.innerText = "LOGIN"; }
+            } catch(e) { btn.innerText = "LOGIN"; error.innerText = "Network Error"; }
+        }
+
+        async function loadContacts() {
+            const list = document.getElementById('contactsList');
+            let skel = "";
+            for(let i=0; i<3; i++) skel += `<div class="contact-skeleton"><div class="skeleton sk-avatar"></div><div class="skeleton sk-line"></div></div>`;
+            list.innerHTML = skel;
+            const res = await fetch(`${API_URL}?action=getContacts&mobile=${currentUser.mobile}`).then(r => r.json());
+            list.innerHTML = "";
+            if(res.data.length === 0) list.innerHTML = "<div style='padding:40px; text-align:center; color:#999'>Click + to add someone.</div>";
+            else res.data.forEach(user => {
+                const initial = user.name.charAt(0).toUpperCase();
+                const item = document.createElement('div');
+                item.className = 'contact-item';
+                item.innerHTML = `<div class="avatar">${initial}</div><div class="info"><h3>${user.name}</h3><p>${user.mobile}</p></div>`;
+                item.onclick = () => openChat(user);
+                list.appendChild(item);
+            });
+        }
+
+        function openAddModal() { document.getElementById('modal-add').classList.add('active'); }
+        function closeAddModal() { document.getElementById('modal-add').classList.remove('active'); document.getElementById('addStatus').innerText=""; }
+        async function addNewContact() {
+            const target = document.getElementById('newContactMobile').value;
+            const status = document.getElementById('addStatus');
+            if(!target) return;
+            status.style.color = "orange"; status.innerText = "Searching...";
+            const res = await fetch(`${API_URL}?action=addContact&owner=${currentUser.mobile}&targetMobile=${target}`).then(r => r.json());
+            if(res.status === 'success') { closeAddModal(); loadContacts(); } else { status.style.color = "red"; status.innerText = res.message; }
+        }
+
+        // --- CHAT WITH TICKS & DATE ---
+        function openChat(user) {
+            currentChatPartner = user;
+            document.getElementById('chatTitle').innerText = user.name;
+            showScreen('screen-chat');
+            document.getElementById('chatContainer').innerHTML = "<div style='text-align:center; padding:20px; color:#666;'>Loading...</div>";
+            fetchChat();
+            // Mark as read immediately
+            fetch(`${API_URL}?action=markRead&sender=${currentUser.mobile}&receiver=${currentChatPartner.mobile}`);
+            chatInterval = setInterval(fetchChat, 2000);
+        }
+
+        async function fetchChat() {
+            if(!currentChatPartner) return;
+            const container = document.getElementById('chatContainer');
+            const res = await fetch(`${API_URL}?action=getChat&sender=${currentUser.mobile}&receiver=${currentChatPartner.mobile}`).then(r => r.json());
+            
+            if(res.status === 'success') {
+                if(container.innerText.includes("Loading...")) container.innerHTML = "";
+                
+                let html = "";
+                let lastDate = "";
+
+                res.data.forEach(msg => {
+                    // DATE SEPARATOR LOGIC
+                    if(msg.date !== lastDate) {
+                        html += `<div class="date-badge">${msg.date}</div>`;
+                        lastDate = msg.date;
+                    }
+
+                    const type = (msg.sender == currentUser.mobile) ? 'me' : 'them';
+                    const isReadClass = (msg.status === 'read') ? 'read' : '';
+                    
+                    // Double ticks icon (✓✓)
+                    const ticks = `<span class="ticks"> &#10003;&#10003; </span>`;
+
+                    html += `
+                        <div class="msg ${type} ${isReadClass}">
+                            <span>${msg.text}</span>
+                            <div class="meta">
+                                <span class="time">${msg.time}</span>
+                                ${ticks}
+                            </div>
+                        </div>`;
+                });
+                
+                if(container.innerHTML !== html) { 
+                    container.innerHTML = html; 
+                    container.scrollTop = container.scrollHeight; 
+                    
+                    // Trigger read receipt check
+                    fetch(`${API_URL}?action=markRead&sender=${currentUser.mobile}&receiver=${currentChatPartner.mobile}`);
+                }
+            }
+        }
+
+        async function sendMsg() {
+            const input = document.getElementById('msgInput');
+            const text = input.value;
+            if(!text) return;
+            const container = document.getElementById('chatContainer');
+            // Optimistic Update (One Gray Tick)
+            container.innerHTML += `<div class="msg me"><div class="text">${text}</div><div class="meta"><span class="time">...</span><span class="ticks" style="display:inline-block">&#10003;</span></div></div>`;
+            container.scrollTop = container.scrollHeight;
+            input.value = "";
+            await fetch(`${API_URL}?action=send&sender=${currentUser.mobile}&receiver=${currentChatPartner.mobile}&text=${encodeURIComponent(text)}`);
+            fetchChat();
+        }
+    </script>
+</body>
+</html>
