@@ -1,312 +1,1324 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chat App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School | Secure Portal</title>
+    
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
     <style>
-        /* --- RESET & VARS --- */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; padding: 0; font-family: 'Roboto', sans-serif; background-color: #f0f2f5; height: 100vh; overflow: hidden; user-select: none; }
-        :root { --primary: #008069; --white: #ffffff; --bg-chat: #efeae2; --bubble-me: #d9fdd3; --bubble-them: #ffffff; --fab: #00a884; --blue-tick: #34B7F1; }
+        /* --- CORE VARIABLES & RESET --- */
+        :root {
+            --primary-color: #0c3b5e;
+            --secondary-color: #f1c40f;
+            --bg-light: #f4f7f6;
+            --text-dark: #333;
+            --header-height: 70px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: var(--bg-light); color: var(--text-dark); display: flex; flex-direction: column; min-height: 100vh; }
 
-        /* --- SCREENS --- */
-        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); display: none; flex-direction: column; z-index: 10; }
-        .screen.active { display: flex; animation: slideIn 0.2s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        /* --- HEADER & NAVIGATION --- */
+        header {
+            position: fixed; top: 0; width: 100%; height: var(--header-height);
+            background: var(--primary-color); color: white;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        /* --- HEADER & NAVIGATION (UPDATED) --- */
+        .logo-area { display: flex; align-items: center; gap: 12px; }
+        .school-logo { height: 46px; border-radius: 4px; background: white; padding: 2px; }
+        .school-title-box { display: flex; flex-direction: column; justify-content: center; }
+        .school-name { font-size: 1.3rem; font-weight: bold; line-height: 1.1; }
+        .est-year { font-size: 0.9rem; color: var(--secondary-color); font-weight: 600; letter-spacing: 1px; margin-top: 3px; }
+        
+        .top-nav { display: flex; gap: 1.5rem; }
+        .top-nav button {
+            background: none; border: none; color: white; font-size: 1rem;
+            cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: color 0.3s;
+        }
+        .top-nav button:hover, .top-nav button.active-link { color: var(--secondary-color); }
+        .mobile-menu-btn { display: none; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
 
-        /* --- HEADER --- */
-        .header { background: var(--primary); color: white; padding: 16px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 20; }
-        .header h1 { font-size: 20px; margin: 0; font-weight: 500; }
-        .back-btn { font-size: 24px; margin-right: 20px; cursor: pointer; }
+        /* Hide private nav items by default */
+        [data-auth="private"] { display: none !important; }
 
-        /* --- LOGIN --- */
-        .login-container { padding: 40px; display: flex; flex-direction: column; justify-content: center; height: 100%; }
-        input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; outline: none; }
-        input:focus { border-color: var(--primary); border-width: 2px; margin-bottom: 14px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        /* --- MAIN LAYOUT --- */
+        main { flex: 1; margin-top: var(--header-height);}
+        .page { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 2rem; }
 
-        /* --- CONTACTS --- */
-        .list-content { flex: 1; overflow-y: auto; position: relative; }
-        .contact-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.1s; }
-        .contact-item:active { background: #f5f5f5; }
-        .avatar { width: 50px; height: 50px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #555; margin-right: 15px; }
-        .info h3 { margin: 0 0 5px 0; font-size: 16px; color: #333; }
-        .info p { margin: 0; font-size: 13px; color: #888; }
+        /* --- FIXED IMAGE SLIDER --- */
+        .slider-container { position: relative; height: 450px; border-radius: 8px 8px 0 0; overflow: hidden; background: #000; }
+        .slides { display: flex; width: 300%; height: 100%; transition: transform 0.6s ease-in-out; }
+        .slide { width: 33.333%; height: 100%; position: relative; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; }
+        .slide-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; width: 80%; }
+        .slide-text h1 { font-size: 3rem; margin-bottom: 10px; text-shadow: 2px 2px 8px rgba(0,0,0,0.8); }
+        .slider-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; padding: 15px; cursor: pointer; border-radius: 50%; z-index: 10; font-size: 1.5rem; }
+        .slider-btn:hover { background: var(--primary-color); }
+        .prev { left: 20px; } .next { right: 20px; }
+
+        /* --- NEWS TICKER --- */
+        .news-ticker-container { display: flex; background: white; border-left: 4px solid var(--secondary-color); border-radius: 0 0 8px 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .news-ticker-label { background: var(--primary-color); color: white; padding: 0.8rem 1.5rem; font-weight: bold; z-index: 2; }
+        .news-ticker { flex: 1; overflow: hidden; padding: 0.8rem 0; position: relative; }
+        .ticker-content { display: flex; gap: 3rem; white-space: nowrap; animation: ticker 25s linear infinite; }
+        @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        /* --- AUTH LOGIN PANEL --- */
+        .auth-wrapper { position: relative; min-height: calc(100vh - var(--header-height)); display: flex; align-items: center; justify-content: center; padding: 2rem; }
+        .auth-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat; filter: blur(8px); z-index: 1; }
+        .auth-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(12, 59, 94, 0.6); z-index: 2; }
+        .auth-card { background: white; width: 100%; max-width: 450px; z-index: 3; padding: 2.5rem; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); border-top: 5px solid var(--primary-color); }
+        .auth-header { text-align: center; margin-bottom: 2rem; color: var(--primary-color); }
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 5px; font-size: 0.9rem; }
+        .form-control { width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+        .btn-submit { width: 100%; background: var(--primary-color); color: white; border: none; padding: 1rem; font-size: 1rem; font-weight: bold; border-radius: 4px; cursor: pointer; display: flex; justify-content: center; gap: 8px; }
+        .btn-submit:hover { background: #082a44; }
+
+        /* --- ADMIN DASHBOARD & FORM --- */
+        .dashboard-header { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 2rem; border-left: 5px solid var(--secondary-color); }
+        .admin-form-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-top: 5px solid var(--primary-color); }
+        .section-title { background: #f0f4f8; padding: 10px; border-left: 4px solid var(--primary-color); margin: 1.5rem 0 1rem; font-weight: bold; color: var(--primary-color); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+        .loader { display: none; text-align: center; margin-top: 10px; color: var(--primary-color); font-weight: bold; }
+
+        /* --- FOOTER --- */
+        footer { background: var(--primary-color); color: white; margin-top: auto; }
+        .footer-content { max-width: 1200px; margin: auto; padding: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }
+        .footer-col h3 { color: var(--secondary-color); margin-bottom: 1rem; display: flex; align-items: center; gap: 5px; }
+        .footer-col p { font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .footer-bottom { text-align: center; padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; }
+
+        @media (max-width: 768px) {
+            .top-nav { display: none; flex-direction: column; position: absolute; top: var(--header-height); left: 0; width: 100%; background: var(--primary-color); padding: 1rem 0; }
+            .top-nav.show { display: flex !important; }
+            .top-nav button { padding: 10px 2rem; width: 100%; justify-content: flex-start; }
+            .mobile-menu-btn { display: block; }
+            .slide-text h1 { font-size: 2rem; }
+            .stats-section { padding: 1rem 1rem 2rem 1rem !important; }
+        }
 
 
+        /* --- DATABASE TABLE STYLING --- */
+        .table-responsive { overflow-x: auto; margin-top: 1.5rem; }
+        .data-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        .data-table th, .data-table td { padding: 12px 15px; border: 1px solid #ddd; text-align: left; }
+        .data-table th { background-color: var(--primary-color); color: white; font-weight: 500; }
+        .data-table tr:nth-child(even) { background-color: #f9f9f9; }
+        .data-table tr:hover { background-color: #f1f1f1; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .status-paid { background: #d4edda; color: #155724; }
+        .status-due { background: #f8d7da; color: #721c24; }
+
+        /* --- FLOATING WHATSAPP BUTTON --- */
+        .floating-whatsapp {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        background-color: #25d366; 
+        border-radius: 50%;
+        box-shadow: 2px 2px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        text-decoration: none;
+        }
+
+        .floating-whatsapp:hover {
+          transform: scale(1.1);
+          box-shadow: 2px 2px 20px rgba(37, 211, 102, 0.5);
+        }
+
+        .floating-whatsapp img {
+          width: 35px;
+          height: 35px;
+        }
+        /* --- FEE PREVIEW & GPAY ANIMATION --- */
+        .receipt-preview { background: #fff; padding: 2rem; border: 1px dashed #ccc; border-radius: 8px; margin-top: 1.5rem; display: none; }
+        .receipt-preview h3 { color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); padding-bottom: 5px; margin-bottom: 15px; }
+        .preview-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; }
+        .preview-row.bold { font-weight: bold; font-size: 1.1rem; color: var(--primary-color); border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px; }
+        
+        .gpay-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
+        .success-checkmark { width: 80px; height: 115px; margin: 0 auto; }
+        .check-icon { width: 80px; height: 80px; position: relative; border-radius: 50%; box-sizing: content-box; border: 4px solid #4CAF50; }
+        .check-icon::before { top: 3px; left: -2px; width: 30px; transform-origin: 100% 50%; border-radius: 100px 0 0 100px; }
+        .check-icon::after { top: 0; left: 30px; width: 60px; transform-origin: 0 50%; border-radius: 0 100px 100px 0; animation: rotateCircle 4.25s ease-in; }
+        .check-icon::before, .check-icon::after { content: ''; height: 100px; position: absolute; background: #fff; transform: rotate(-45deg); }
+        .icon-line { height: 5px; background-color: #4CAF50; display: block; border-radius: 2px; position: absolute; z-index: 10; }
+        .icon-line.line-tip { top: 46px; left: 14px; width: 25px; transform: rotate(45deg); animation: iconLineTip 0.75s; }
+        .icon-line.line-long { top: 38px; right: 8px; width: 47px; transform: rotate(-45deg); animation: iconLineLong 0.75s; }
+        .icon-circle { top: -4px; left: -4px; z-index: 10; width: 80px; height: 80px; border-radius: 50%; position: absolute; box-sizing: content-box; border: 4px solid rgba(76, 175, 80, 0.5); }
+        .icon-fix { top: 8px; width: 5px; left: 26px; z-index: 1; height: 85px; position: absolute; transform: rotate(-45deg); background-color: #fff; }
+        @keyframes rotateCircle { 0% { transform: rotate(-45deg); } 5% { transform: rotate(-45deg); } 12% { transform: rotate(-405deg); } 100% { transform: rotate(-405deg); } }
+        @keyframes iconLineTip { 0% { width: 0; left: 1px; top: 19px; } 54% { width: 0; left: 1px; top: 19px; } 70% { width: 50px; left: -8px; top: 37px; } 84% { width: 17px; left: 21px; top: 48px; } 100% { width: 25px; left: 14px; top: 46px; } }
+        @keyframes iconLineLong { 0% { width: 0; right: 46px; top: 54px; } 65% { width: 0; right: 46px; top: 54px; } 84% { width: 55px; right: 0px; top: 35px; } 100% { width: 47px; right: 8px; top: 38px; } }
 
 
-/* FLOATING ACTION BUTTON (FAB) */
-        .fab {
+        /* --- PREMIUM ANIMATED STATS COUNTER (NEW DESIGN) --- */
+        .stats-section {
+            padding: 1rem 6.5rem 3rem 6.5rem;
+            margin: 1rem 0;
+            background-color: transparent; 
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+        .stat-item {
+            background: white;
+            padding: 2rem 1rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            border-bottom: 4px solid var(--secondary-color);
+            border-top: 1px solid #eee;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        /* Smooth Hover Effect */
+        .stat-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+        }
+        /* Subtle Background Watermark effect */
+        .stat-item::before {
+            content: '';
             position: absolute;
-            bottom: 25px;
-            right: 25px;
-            width: 60px;
-            height: 60px;
-            /* WhatsApp-style Gradient */
-            background: linear-gradient(135deg, #25D366, #128C7E); 
-            color: white;
+            top: -20px;
+            right: -20px;
+            width: 100px;
+            height: 100px;
+            background: var(--primary-color);
+            opacity: 0.03;
+            border-radius: 50%;
+            z-index: 0;
+        }
+        /* Icon Styling */
+        .stat-item .material-icons {
+            font-size: 2.8rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+            background: #f4f7f6;
+            padding: 15px;
+            border-radius: 50%;
+            border: 1px solid #e0e0e0;
+        }
+        /* Number Styling */
+        .stat-item h2 {
+            font-size: 2.8rem;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+            font-weight: 800;
+            position: relative;
+            z-index: 1;
+            display: inline-block;
+        }
+        /* '+' sign for numbers */
+        .stat-item:not(.percentage) h2::after {
+            content: '+';
+            color: var(--secondary-color);
+            font-size: 2rem;
+            vertical-align: top;
+            margin-left: 2px;
+        }
+        /* '%' sign for passing percentage */
+        .stat-item.percentage h2::after {
+            content: '%';
+            color: var(--secondary-color);
+            font-size: 2rem;
+            vertical-align: top;
+            margin-left: 2px;
+        }
+        /* Text Styling */
+        .stat-item p {
+            font-size: 0.95rem;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* --- PRINCIPAL DESK SECTION --- */
+        .principal-desk {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2.5rem;
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            
+            /* --- THE WIDTH FIX --- */
+            max-width: 1136px; /* Slider ki exact width ke barabar */
+            margin: 3rem auto; /* Screen ke beech mein lane ke liye */
+            width: calc(100% - 4rem); /* Mobile view mein sides mein gap chhodne ke liye */
+            
+            border-left: 6px solid var(--secondary-color);
+            position: relative;
+        }
+        
+        /* Quotation mark watermark */
+        .principal-desk::before {
+            content: '“';
+            position: absolute;
+            top: 10px;
+            left: 30px;
+            font-size: 8rem;
+            color: var(--primary-color);
+            opacity: 0.05;
+            font-family: serif;
+        }
+        .principal-image-box {
+            flex: 1;
+            min-width: 250px;
+            text-align: center;
+        }
+        .principal-image-box img {
+            width: 100%;
+            max-width: 280px;
+            border-radius: 8px;
+            box-shadow: 0 15px 25px rgba(0,0,0,0.15);
+            border: 4px solid white;
+        }
+        .principal-msg {
+            flex: 2;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            z-index: 1;
+        }
+        .principal-msg h2 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 2.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .principal-msg p {
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: #555;
+            margin-bottom: 1rem;
+            font-style: italic;
+        }
+        .principal-signature {
+            margin-top: 1.5rem;
+            border-top: 2px solid #eee;
+            padding-top: 1rem;
+        }
+        .principal-signature h4 {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        .principal-signature span {
+            font-size: 0.95rem;
+            color: #777;
+            font-weight: 500;
+        }
+
+
+
+
+        /* --- ELITE FACILITIES SECTION --- */
+        .facilities-section {
+            padding: 2rem 0 4rem 0;
+            text-align: center;
+        }
+        .facilities-section h2 {
+            color: var(--primary-color);
+            margin-bottom: 2.5rem;
+            font-size: 2.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .facilities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            max-width: 1136px; /* Slider aur Principal desk ke barabar */
+            margin: 0 auto;
+        }
+        .facility-card {
+            background: white;
+            padding: 2.5rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        /* Hover Animation */
+        .facility-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            border-bottom: 3px solid var(--secondary-color);
+        }
+        .facility-icon {
+            width: 80px;
+            height: 80px;
+            background: #f4f7f6;
+            color: var(--primary-color);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
-            font-weight: 300;
-            /* Deep shadow for floating depth */
-            box-shadow: 0 8px 20px rgba(18, 140, 126, 0.4);
-            cursor: pointer;
-            z-index: 100;
-            /* Smooth springy transition */
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            /* Continuous Pulse Animation */
-            animation: pulse-green 2s infinite;
+            margin: 0 auto 1.5rem auto;
+            transition: all 0.3s ease;
+        }
+        /* Icon color change on hover */
+        .facility-card:hover .facility-icon {
+            background: var(--primary-color);
+            color: white;
+            transform: scale(1.1);
+        }
+        .facility-icon .material-icons {
+            font-size: 2.8rem;
+        }
+        .facility-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            font-size: 1.4rem;
+        }
+        .facility-card p {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.6;
         }
 
-        /* Hover: Lift up, Glow, and Rotate slightly */
-        .fab:hover {
-            transform: translateY(-5px) scale(1.1) rotate(90deg);
-            box-shadow: 0 15px 30px rgba(18, 140, 126, 0.6);
-        }
 
-        /* Click: Press down */
-        .fab:active {
-            transform: scale(0.9) rotate(90deg);
-            box-shadow: 0 4px 10px rgba(18, 140, 126, 0.4);
-            transition: 0.1s;
-        }
-
-        /* Ripple Pulse Animation */
-        @keyframes pulse-green {
-            0% {
-                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
-            }
-            70% {
-                box-shadow: 0 0 0 15px rgba(37, 211, 102, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
-            }
-        }
-
-        /* --- MODAL --- */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; }
-        .modal-overlay.active { display: flex; }
-        .modal-box { background: white; width: 85%; max-width: 320px; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: var(--primary); }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
-        .btn-text { background: none; border: none; color: var(--primary); font-weight: bold; cursor: pointer; padding: 10px; }
-
-        /* --- CHAT AREA --- */
-        .chat-bg { flex: 1; background-color: var(--bg-chat); background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        
-        /* Message Bubbles */
-        .msg { max-width: 75%; padding: 6px 7px 8px 9px; border-radius: 8px; font-size: 15px; line-height: 19px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-        .msg.me { align-self: flex-end; background: var(--bubble-me); border-top-right-radius: 0; }
-        .msg.them { align-self: flex-start; background: var(--bubble-them); border-top-left-radius: 0; }
-        
-        /* Time & Ticks container */
-        .meta { display: flex; align-items: center; justify-content: flex-end; margin-top: 2px; height: 15px; }
-        .time { font-size: 11px; color: rgba(0,0,0,0.45); margin-right: 4px; }
-        
-        /* Ticks CSS */
-        .ticks { display: none; font-size: 14px; line-height: 14px; }
-        .msg.me .ticks { display: inline-block; color: rgba(0,0,0,0.3); } /* Default Gray */
-        .msg.me.read .ticks { color: var(--blue-tick); } /* Blue when read */
-
-        /* Date Separator */
-        .date-badge { align-self: center; background: #d3ebf6; padding: 5px 12px; border-radius: 8px; font-size: 12px; color: #555; margin: 10px 0; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
-
-        .footer { background: white; padding: 8px; display: flex; align-items: center; border-top: 1px solid #ddd; }
-        .footer input { margin: 0; border-radius: 20px; padding: 10px 15px; border: none; background: #f0f2f5; flex: 1; }
-        .send-icon { width: 45px; height: 45px; background: var(--primary); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; margin-left: 8px; cursor: pointer; font-size: 18px; }
-
-        /* SKELETON */
-        .skeleton { background: #f6f7f8; background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%); background-size: 800px 104px; animation: shimmer 1s linear infinite forwards; }
-        @keyframes shimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
-        .contact-skeleton { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
-        .sk-avatar { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; }
-        .sk-line { height: 14px; width: 60%; }
     </style>
 </head>
 <body>
 
-    <div id="screen-login" class="screen active">
-        <div class="login-container">
-            <h2 style="color:var(--primary); text-align:center;">Welcome</h2>
-            <input type="text" id="loginName" placeholder="Your Name">
-            <input type="number" id="loginMobile" placeholder="Mobile Number">
-            <input type="text" id="loginDOB" placeholder="DOB (DDMMYYYY)">
-            <button class="btn" onclick="doLogin()">Login</button>
-            <p id="errorMsg" style="color:red; text-align:center; font-size:13px; margin-top:10px;"></p>
+    <header>
+        <div class="logo-area">
+            <img src="https://lh3.googleusercontent.com/u/0/d/1DDQ6K4IWtRrqop6qW1H_aTr7w2A5sd1S" alt="Logo" class="school-logo">
+            <div class="school-title-box">
+                <span class="school-name">Dr. APJ Abdul Kalam Jatiya Bidyalaya</span>
+                <span class="est-year">ESTD. 2016</span> </div>
+        </div>
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><span class="material-icons">menu</span></button>
+        <nav class="top-nav" id="top-nav">
+            <button class="nav-btn active-link" onclick="navigateTo('home')" data-auth="public"><span class="material-icons">home</span> Home</button>
+            <button class="nav-btn" onclick="navigateTo('academics')" data-auth="public"><span class="material-icons">menu_book</span> Academics</button>
+            <button class="nav-btn" onclick="navigateTo('login-section')" data-auth="public" id="nav-login-btn"><span class="material-icons">admin_panel_settings</span> Admin Login</button>
+            
+            <button class="nav-btn" onclick="navigateTo('admin-dashboard')" data-auth="private"><span class="material-icons">dashboard</span> Dashboard</button>
+            <button class="nav-btn" onclick="navigateTo('admission-form-view')" data-auth="private"><span class="material-icons">how_to_reg</span> New Admission</button>
+            <button class="nav-btn" onclick="logout()" data-auth="private" style="color: #ff6b6b;"><span class="material-icons">logout</span> Logout</button>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home" class="page active">
+            <div class="container">
+                <div class="slider-container">
+                    <div class="slides" id="slider-track">
+                        <div class="slide">
+                            <img src="https://lh3.googleusercontent.com/u/0/d/1UDouWfcot0LOeathEC-gBIEIlU49veDp" alt="Campus">
+                            <div class="slide-text"><h1>Excellence in Education</h1><p>Building tomorrow's leaders today.</p></div>
+                        </div>
+                        <div class="slide">
+                            <img src="https://lh3.googleusercontent.com/u/0/d/1KdFDjk6ufIgreFUD9HMsFBd9rEw5rKsJ" alt="Classroom">
+                            <div class="slide-text"><h1>Inspirational Events</h1><p>Fostering innovation and critical thinking.</p></div>
+                        </div>
+                        <div class="slide">
+                            <img src="https://lh3.googleusercontent.com/u/0/d/1HTV1Or-XtMWzwByYuKrg6LmdQ1abo0XX" alt="Students">
+                            <div class="slide-text"><h1>A Brighter Future</h1><p>Join our elite academic community.</p></div>
+                        </div>
+                    </div>
+                    <button class="slider-btn prev" onclick="moveSlide(-1)">&#10094;</button>
+                    <button class="slider-btn next" onclick="moveSlide(1)">&#10095;</button>
+                </div>
+                <br>
+                <div class="news-ticker-container">
+                    <div class="news-ticker-label"><span class="material-icons">campaign</span> Updates</div>
+                    <div class="news-ticker">
+                        <div class="ticker-content">
+                            <a href="#" onclick="navigateTo('login-section')" style="color:var(--text-dark); text-decoration:none;"><b style="color:red">[URGENT]</b> Admission Portal is Live! Admin access required.</a>
+                            <span style="margin:0 20px;">|</span>
+                            <span>Annual Science Exhibition scheduled for next month.</span>
+                        </div>
+                    </div>
+                </div>
+                <h2 style="color:var(--primary-color);"><span class="material-icons" style="vertical-align: middle;">school</span> Why Choose Us?</h2>
+                <p>Delivering world-class education with state-of-the-art facilities and a holistic approach.</p>
+            </div>
+
+            <div class="stats-section">
+    <div class="stats-grid">
+        <div class="stat-item">
+            <span class="material-icons">groups</span>
+            <h2 class="counter" data-target="500">0</h2>
+            <p>Enrolled Students</p>
+        </div>
+        <div class="stat-item">
+            <span class="material-icons">school</span>
+            <h2 class="counter" data-target="25">0</h2>
+            <p>Expert Faculty</p>
+        </div>
+        <div class="stat-item">
+            <span class="material-icons">military_tech</span>
+            <h2 class="counter" data-target="15">0</h2>
+            <p>Years of Excellence</p>
+        </div>
+        <div class="stat-item percentage">
+            <span class="material-icons">emoji_events</span>
+            <h2 class="counter" data-target="100">0</h2>
+            <p>Passing Result</p>
         </div>
     </div>
+</div>
 
-    <div id="screen-contacts" class="screen">
-        <div class="header"><h1>PeChat</h1></div>
-        <div class="list-content" id="contactsList"></div>
-        <div class="fab" onclick="openAddModal()">+</div>
-    </div>
 
-    <div id="modal-add" class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-title">New Chat</div>
-            <input type="number" id="newContactMobile" placeholder="Enter Mobile Number">
-            <p id="addStatus" style="font-size:12px; color:red; height:15px; margin:0 0 10px 0;"></p>
-            <div class="modal-actions">
-                <button class="btn-text" style="color:#666" onclick="closeAddModal()">Cancel</button>
-                <button class="btn-text" onclick="addNewContact()">Add</button>
+        
+        <div class="principal-desk">
+                    <div class="principal-image-box">
+                        <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=500&q=80" alt="Principal">
+                    </div>
+                <div class="principal-msg">
+                        <h2><span class="material-icons" style="font-size: 2.2rem; color: var(--secondary-color);">format_quote</span> Principal's Message</h2>
+                        <p>"Education is not just about academic excellence; it is about building character, discipline, and the vision to lead tomorrow. At Dr. APJ Abdul Kalam Jatiya Bidyalaya, we are committed to nurturing every child's potential in a secure and highly inspiring environment."</p>
+                        <p>"Our mission is to bridge the gap between traditional values and modern technological advancements, ensuring our students are prepared for global challenges."</p>
+                        <div class="principal-signature">
+                            <h4>Dr. A. Rahman</h4>
+                            <span>Principal, Dr. APJ Abdul Kalam J.B.</span>
+                        </div>
+                </div>
+        </div>
+
+
+
+        <div class="facilities-section">
+                    <h2><span class="material-icons" style="color: var(--secondary-color);">star</span> Our Elite Facilities</h2>
+                    <div class="facilities-grid">
+                        <div class="facility-card">
+                            <div class="facility-icon"><span class="material-icons">laptop_chromebook</span></div>
+                            <h3>Smart Classrooms</h3>
+                            <p>Interactive digital boards and modern teaching aids for a highly immersive learning experience.</p>
+                        </div>
+                        <div class="facility-card">
+                            <div class="facility-icon"><span class="material-icons">science</span></div>
+                            <h3>Advanced Labs</h3>
+                            <p>Fully equipped Science and Computer laboratories to provide practical, hands-on exposure.</p>
+                        </div>
+                        <div class="facility-card">
+                            <div class="facility-icon"><span class="material-icons">local_library</span></div>
+                            <h3>Rich Library</h3>
+                            <p>A vast collection of academic books, journals, and digital resources to inspire young readers.</p>
+                        </div>
+                        <div class="facility-card">
+                            <div class="facility-icon"><span class="material-icons">directions_bus</span></div>
+                            <h3>Safe Transport</h3>
+                            <p>Secure and highly reliable school bus facility covering all major routes for student convenience.</p>
+                        </div>
+                        <div class="facility-card">
+                            <div class="facility-icon"><span class="material-icons">sports_soccer</span></div>
+                            <h3>Sports Complex</h3>
+                            <p>Dedicated spaces and professional equipment for indoor and outdoor games to ensure physical fitness.</p>
+                        </div>
+                        <div class="facility-card">
+                            <div class="facility-icon"><span class="material-icons">security</span></div>
+                            <h3>24/7 Security</h3>
+                            <p>High-definition CCTV surveillance and trained security personnel for a 100% safe campus environment.</p>
+                        </div>
+                    </div>
+                </div>
+
+        <a href="https://wa.me/918822778233?text=Hello%20SA%20Khan%20Academy!%20I%20would%20like%20to%20know%20more%20about%20admissions." 
+           class="floating-whatsapp" 
+           target="_blank" 
+           aria-label="Chat with us on WhatsApp">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp Icon">
+        </a>
+        </section>
+
+        <section id="academics" class="page">
+            <div class="container">
+                <h1 style="color:var(--primary-color);"><span class="material-icons">menu_book</span> Academic Programs</h1>
+                <p>Our curriculum spans across various disciplines, ensuring an elite standard of education equipped with modern laboratories and digital classrooms.</p>
+            </div>
+        </section>
+
+        <section id="login-section" class="page">
+            <div class="auth-wrapper">
+                <div class="auth-bg"></div><div class="auth-overlay"></div>
+                <div class="auth-card">
+                    <div class="auth-header">
+                        <h2><span class="material-icons" style="font-size: 2.2rem;">admin_panel_settings</span> Secure Login</h2>
+                        <p style="color:#666; font-size:0.9rem;">Authorized Personnel Only</p>
+                    </div>
+                    <form onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label>Admin Email ID</label>
+                            <input type="email" id="loginEmail" class="form-control" required placeholder="admin@sakhanacademy.edu">
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="loginPass" class="form-control" required placeholder="••••••••">
+                        </div>
+                        <button type="submit" class="btn-submit"><span class="material-icons">lock_open</span> Authenticate</button>
+                        <div class="loader" id="loginLoader">Verifying Credentials...</div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section id="admin-dashboard" class="page">
+            <div class="container">
+                <div class="dashboard-header">
+                    <h1 style="color:var(--primary-color); margin-bottom: 5px;"><span class="material-icons">dashboard</span> Admin Dashboard</h1>
+                    <p style="color: #555;">Welcome to the secure control panel. Your session is active.</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="admin-form-card" style="text-align: center; cursor: pointer;" onclick="navigateTo('admission-form-view')">
+                        <span class="material-icons" style="font-size: 4rem; color: var(--primary-color);">person_add</span>
+                        <h3 style="margin-top: 10px; color: var(--primary-color);">New Admission</h3>
+                        <p style="font-size: 0.9rem; color: #666;">Enroll a new student and generate receipt</p>
+                    </div>
+                    <div class="admin-form-card" style="text-align: center; cursor: pointer;" onclick="navigateTo('receipt-download-view')">
+                        <span class="material-icons" style="font-size: 4rem; color: var(--primary-color);">receipt_long</span>
+                        <h3 style="margin-top: 10px; color: var(--primary-color);">Download Receipt</h3>
+                        <p style="font-size: 0.9rem; color: #666;">Search by Class & ID to print</p>
+                    </div>
+                    <div class="admin-form-card" style="text-align: center; cursor: pointer;" onclick="navigateTo('database-records-view')">
+                        <span class="material-icons" style="font-size: 4rem; color: var(--primary-color);">inventory</span>
+                        <h3 style="margin-top: 10px; color: var(--primary-color);">Database Records</h3>
+                        <p style="font-size: 0.9rem; color: #666;">View all admitted students list</p>
+                    </div>
+                    <div class="admin-form-card" style="text-align: center; cursor: pointer;" onclick="navigateTo('monthly-fee-view')">
+                        <span class="material-icons" style="font-size: 4rem; color: var(--primary-color);">payments</span>
+                        <h3 style="margin-top: 10px; color: var(--primary-color);">Student Monthly Fee</h3>
+                        <p style="font-size: 0.9rem; color: #666;">Collect fees & generate receipt</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="admission-form-view" class="page">
+            <div class="container">
+                <div class="admin-form-card">
+                    <h2 style="color:var(--primary-color); display:flex; align-items:center; gap:10px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                        <span class="material-icons" style="font-size: 2rem;">how_to_reg</span> Official Admission Form
+                    </h2>
+                    
+                    <form onsubmit="handleAdmissionSubmit(event)" style="margin-top: 1.5rem;">
+                        <div class="section-title">Section A: Personal Details</div>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Student Full Name</label><input type="text" id="stuName" class="form-control" required></div>
+                            <div class="form-group"><label>Date of Birth</label><input type="date" id="stuDob" class="form-control" required></div>
+                            <div class="form-group"><label>Father's Name</label><input type="text" id="fatName" class="form-control" required></div>
+                            <div class="form-group"><label>Mother's Name</label><input type="text" id="motName" class="form-control" required></div>
+                            <div class="form-group"><label>Parent Mobile No.</label><input type="tel" id="mobile" class="form-control" required pattern="[0-9]{10}"></div>
+                            <div class="form-group"><label>Aadhaar Card No.</label><input type="text" id="aadhaar" class="form-control" required></div>
+                            <div class="form-group" style="grid-column: 1 / -1;"><label>Present Address</label><input type="text" id="address" class="form-control" required></div>
+                            <div class="form-group">
+                                <label>Admission Class</label>
+                                <select id="admClass" class="form-control" required>
+                                    <option value="">-- Select Class --</option>
+                                    <option value="LKG">LKG</option><option value="UKG">UKG</option>
+                                    <option value="Class 1">Class 1</option><option value="Class 2">Class 2</option>
+                                    <option value="Class 3">Class 3</option><option value="Class 4">Class 4</option>
+                                    <option value="Class 5">Class 5</option><option value="Class 6">Class 6</option>
+                                    <option value="Class 7">Class 7</option><option value="Class 8">Class 8</option>
+                                    <option value="Class 9">Class 9</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="section-title">Section B: Fee Structure (₹)</div>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Admission Fee</label><input type="number" id="adFee" class="form-control fee-input" value="0" min="0" required></div>
+                            <div class="form-group"><label>Book Fee</label><input type="number" id="bkFee" class="form-control fee-input" value="0" min="0" required></div>
+                            <div class="form-group"><label>Computer Class Fee</label><input type="number" id="cpFee" class="form-control fee-input" value="0" min="0" required></div>
+                            <div class="form-group"><label>Other Fee</label><input type="number" id="otFee" class="form-control fee-input" value="0" min="0" required></div>
+                            <div class="form-group"><label>Total Fee (Auto)</label><input type="number" id="totalFee" class="form-control" value="0" readonly style="background:#eee; font-weight:bold;"></div>
+                            <div class="form-group"><label>Paid Amount</label><input type="number" id="paidFee" class="form-control" value="0" min="0" required></div>
+                        </div>
+
+                        <button type="submit" class="btn-submit" style="margin-top: 1rem;"><span class="material-icons">save</span> Submit to Database & Print Receipt</button>
+                        <div class="loader" id="admLoader">Uploading Database & Generating Receipt...</div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section id="receipt-download-view" class="page">
+            <div class="container">
+                <div class="admin-form-card" style="max-width: 500px; margin: 0 auto;">
+                    <h2 style="color:var(--primary-color); display:flex; align-items:center; gap:10px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                        <span class="material-icons" style="font-size: 2rem;">search</span> Find & Download Receipt
+                    </h2>
+                    
+                    <form onsubmit="handleReceiptDownload(event)" style="margin-top: 1.5rem;">
+                        <div class="form-group">
+                            <label>Admission Class</label>
+                            <select id="searchClass" class="form-control" required>
+                                <option value="">-- Select Class --</option>
+                                <option value="LKG">LKG</option><option value="UKG">UKG</option>
+                                <option value="Class 1">Class 1</option><option value="Class 2">Class 2</option>
+                                <option value="Class 3">Class 3</option><option value="Class 4">Class 4</option>
+                                <option value="Class 5">Class 5</option><option value="Class 6">Class 6</option>
+                                <option value="Class 7">Class 7</option><option value="Class 8">Class 8</option>
+                                <option value="Class 9">Class 9</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Student ID</label>
+                            <input type="number" id="searchId" class="form-control" required placeholder="e.g. 101">
+                        </div>
+                        <button type="submit" class="btn-submit" style="margin-top: 1rem;"><span class="material-icons">download</span> Fetch & Download PDF</button>
+                        <div class="loader" id="searchLoader">Searching Database... Please wait.</div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section id="database-records-view" class="page">
+            <div class="container">
+                <div class="admin-form-card">
+                    <h2 style="color:var(--primary-color); display:flex; align-items:center; gap:10px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                        <span class="material-icons" style="font-size: 2rem;">inventory</span> Class-wise Student Database
+                    </h2>
+                    
+                    <form onsubmit="handleFetchRecords(event)" style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label>Select Class to View</label>
+                            <select id="viewClass" class="form-control" required>
+                                <option value="">-- Select Class --</option>
+                                <option value="LKG">LKG</option><option value="UKG">UKG</option>
+                                <option value="Class 1">Class 1</option><option value="Class 2">Class 2</option>
+                                <option value="Class 3">Class 3</option><option value="Class 4">Class 4</option>
+                                <option value="Class 5">Class 5</option><option value="Class 6">Class 6</option>
+                                <option value="Class 7">Class 7</option><option value="Class 8">Class 8</option>
+                                <option value="Class 9">Class 9</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-submit" style="width: auto; padding: 0.8rem 1.5rem;"><span class="material-icons">visibility</span> View Records</button>
+                    </form>
+                    
+                    <div class="loader" id="dbLoader">Fetching records from secure database...</div>
+                    
+                    <div id="table-container" class="table-responsive" style="display: none;">
+                        <table class="data-table" id="studentTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Mobile No.</th>
+                                    <th>Total Fee</th>
+                                    <th>Paid Fee</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTableBody">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section id="monthly-fee-view" class="page">
+            <div class="container">
+                <div class="admin-form-card" style="max-width: 600px; margin: 0 auto;">
+                    <h2 style="color:var(--primary-color); display:flex; align-items:center; gap:10px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                        <span class="material-icons" style="font-size: 2rem;">payments</span> Collect Monthly Fee
+                    </h2>
+                    
+                    <form onsubmit="handleFeeSearch(event)" style="margin-top: 1.5rem;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Admission Class</label>
+                                <select id="feeClass" class="form-control" required>
+                                    <option value="">-- Select Class --</option>
+                                    <option value="LKG">LKG</option>
+                                    <option value="UKG">UKG</option>
+                                    <option value="Class 1">Class 1</option>
+                                    <option value="Class 2">Class 2</option>
+                                    <option value="Class 3">Class 3</option>
+                                    <option value="Class 4">Class 4</option>
+                                    <option value="Class 5">Class 5</option>
+                                    <option value="Class 6">Class 6</option>
+                                    <option value="Class 7">Class 7</option>
+                                    <option value="Class 8">Class 8</option>
+                                    <option value="Class 9">Class 9</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Student ID</label>
+                                <input type="number" id="feeStudentId" class="form-control" required placeholder="e.g. 101">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-submit"><span class="material-icons">search</span> Find Student Dues</button>
+                        <div class="loader" id="feeLoader">Fetching records...</div>
+                    </form>
+
+                    <div id="receiptPreview" class="receipt-preview">
+                        <h3>Section A (Student Details)</h3>
+                        <div class="preview-row"><span>Student Name:</span> <strong id="prevName"></strong></div>
+                        <div class="preview-row"><span>Parent's Name:</span> <strong id="prevParent"></strong></div>
+                        <div class="preview-row"><span>Class & ID:</span> <strong id="prevClassId"></strong></div>
+                        
+                        <h3 style="margin-top: 20px;">Section B (Fee Structure)</h3>
+                        <div class="preview-row"><span>Admission Total Fee:</span> <strong id="prevAdTotal"></strong></div>
+                        <div id="prevMonthsBreakdown"></div>
+                        <div class="preview-row" style="color: green;"><span>Total Paid So Far:</span> <strong id="prevPaidSoFar"></strong></div>
+                        
+                        <div class="preview-row bold"><span>Total Due Fee:</span> <span id="prevTotalDue" style="color: red;"></span></div>
+                        
+                        <form onsubmit="processFeePayment(event)" style="margin-top: 20px;">
+                            <div class="form-group">
+                                <label style="color: var(--primary-color); font-weight: bold;">Enter Amount Received (Rs.)</label>
+                                <input type="number" id="feeAmountReceived" class="form-control" required min="1" oninput="calculateIndexedDue()">
+                            </div>
+                            <div class="preview-row bold" style="background: #eef; padding: 10px; border-radius: 4px;">
+                                <span>Automatic Total Due Fee Indexed:</span> <span id="prevIndexedDue" style="color: var(--primary-color);"></span>
+                            </div>
+                            <input type="hidden" id="feeRowIndex">
+                            <button type="submit" class="btn-submit" style="background: #28a745; margin-top:15px;"><span class="material-icons">verified</span> Payment Received</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="gpayOverlay" class="gpay-overlay">
+                <div class="success-checkmark">
+                    <div class="check-icon">
+                        <span class="icon-line line-tip"></span>
+                        <span class="icon-line line-long"></span>
+                        <div class="icon-circle"></div>
+                        <div class="icon-fix"></div>
+                    </div>
+                </div>
+                <h2 style="color:#4CAF50; margin-top:20px; font-family:sans-serif;">Payment Successful!</h2>
+                <p>Downloading Receipt...</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-col">
+                <h3><span class="material-icons">info</span> About Us</h3>
+                <p>Founded on principles of integrity and academic rigor, SA Khan Academy provides a holistic learning environment. We bridge the gap between complex theoretical knowledge and practical, real-world applications.</p>
+            </div>
+            <div class="footer-col">
+                <h3><span class="material-icons">contact_support</span> Contact Support</h3>
+                <p><span class="material-icons" style="font-size:1rem; vertical-align:middle;">location_on</span> Santi Chowk (Sirajuli), Sonitpur (Assam) - 784117 </p>
+                <p><span class="material-icons" style="font-size:1rem; vertical-align:middle;">phone</span> +91 88227 78233</p>
+                <p><span class="material-icons" style="font-size:1rem; vertical-align:middle;">email</span> apjakjatiyavidyalaya@gmail.com</p>
             </div>
         </div>
-    </div>
-
-    <div id="screen-chat" class="screen">
-        <div class="header">
-            <div class="back-btn" onclick="showScreen('screen-contacts')">
-                <span class="material-icons">arrow_back</span>
-            </div>
-            <h1 id="chatTitle">User</h1>
-        </div>
-        <div class="chat-bg" id="chatContainer"></div>
-        <div class="footer">
-            <input type="text" id="msgInput" placeholder="Type a message...">
-            <div class="send-icon" onclick="sendMsg()">&#10148;</div>
-        </div>
-    </div>
+        <div class="footer-bottom">&copy; 2026 <strong>Dr. APJ Abdul Kalam Jatiya Bidyalaya</strong>. Securely Engineered by <strong>SA Khan</strong>.</div>
+    </footer>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbz1ZqHpLa00-eCpqvawKCdj-6SVzq2BpAxV9sTN5DckiXwYq-L8XkXk4eEVIERyFg49/exec"; 
+        // ------------------------------------
+        // CONFIG: PASTE GOOGLE SCRIPT URL HERE
+        // ------------------------------------
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-fKSVJLKMKnfpjup1MYaO8HeaX2YG5XazBLXPq3eZXI4FcUau7GLL81iRyAvkxMU/exec"; 
         
-        let currentUser = null;
-        let currentChatPartner = null;
-        let chatInterval = null;
+        // --- STATE MANAGEMENT (SESSION STORAGE) ---
+        function checkAuth() { return sessionStorage.getItem('isLoggedIn') === 'true'; }
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            if(id === 'screen-contacts') {
-                if(chatInterval) clearInterval(chatInterval);
-                loadContacts();
+        // Ek naya function jo refresh hone par buttons ko sahi state mein layega
+        function updateNavUI() {
+            if (checkAuth()) {
+                document.querySelectorAll('[data-auth="public"]').forEach(el => {
+                    if(el.id === 'nav-login-btn') el.style.setProperty('display', 'none', 'important');
+                });
+                document.querySelectorAll('[data-auth="private"]').forEach(el => {
+                    el.style.setProperty('display', 'flex', 'important');
+                });
+            } else {
+                document.querySelectorAll('[data-auth="private"]').forEach(el => el.style.setProperty('display', 'none', 'important'));
+                const loginBtn = document.getElementById('nav-login-btn');
+                if(loginBtn) loginBtn.style.setProperty('display', 'flex', 'important');
             }
         }
 
-        async function doLogin() {
-            const btn = document.querySelector('.btn');
-            const error = document.getElementById('errorMsg');
-            const mobile = document.getElementById('loginMobile').value;
-            const dob = document.getElementById('loginDOB').value;
-            const name = document.getElementById('loginName').value;
-            if(!mobile || !dob) { error.innerText = "Please fill all fields"; return; }
-            btn.innerText = "Processing...";
-            try {
-                const res = await fetch(`${API_URL}?action=login&mobile=${mobile}&dob=${dob}&name=${name}`).then(r => r.json());
-                if(res.status === 'success') {
-                    currentUser = res;
-                    showScreen('screen-contacts');
-                } else { error.innerText = res.message; btn.innerText = "LOGIN"; }
-            } catch(e) { btn.innerText = "LOGIN"; error.innerText = "Network Error"; }
-        }
+        // --- FIXED SLIDER LOGIC ---
+        let currentSlide = 0;
+        const sliderTrack = document.getElementById('slider-track');
+        let slideInterval;
 
-        async function loadContacts() {
-            const list = document.getElementById('contactsList');
-            let skel = "";
-            for(let i=0; i<3; i++) skel += `<div class="contact-skeleton"><div class="skeleton sk-avatar"></div><div class="skeleton sk-line"></div></div>`;
-            list.innerHTML = skel;
-            const res = await fetch(`${API_URL}?action=getContacts&mobile=${currentUser.mobile}`).then(r => r.json());
-            list.innerHTML = "";
-            if(res.data.length === 0) list.innerHTML = "<div style='padding:40px; text-align:center; color:#999'>Click + to add someone.</div>";
-            else res.data.forEach(user => {
-                const initial = user.name.charAt(0).toUpperCase();
-                const item = document.createElement('div');
-                item.className = 'contact-item';
-                item.innerHTML = `<div class="avatar">${initial}</div><div class="info"><h3>${user.name}</h3><p>${user.mobile}</p></div>`;
-                item.onclick = () => openChat(user);
-                list.appendChild(item);
-            });
+        function updateSlider() {
+            sliderTrack.style.transform = `translateX(-${currentSlide * 33.333}%)`;
         }
-
-        function openAddModal() { document.getElementById('modal-add').classList.add('active'); }
-        function closeAddModal() { document.getElementById('modal-add').classList.remove('active'); document.getElementById('addStatus').innerText=""; }
-        async function addNewContact() {
-            const target = document.getElementById('newContactMobile').value;
-            const status = document.getElementById('addStatus');
-            if(!target) return;
-            status.style.color = "orange"; status.innerText = "Searching...";
-            const res = await fetch(`${API_URL}?action=addContact&owner=${currentUser.mobile}&targetMobile=${target}`).then(r => r.json());
-            if(res.status === 'success') { closeAddModal(); loadContacts(); } else { status.style.color = "red"; status.innerText = res.message; }
+        function moveSlide(direction) {
+            currentSlide = (currentSlide + direction + 3) % 3;
+            updateSlider();
+            resetSliderTimer(); // Reset timer if clicked manually
         }
-
-        // --- CHAT WITH TICKS & DATE ---
-        function openChat(user) {
-            currentChatPartner = user;
-            document.getElementById('chatTitle').innerText = user.name;
-            showScreen('screen-chat');
-            document.getElementById('chatContainer').innerHTML = "<div style='text-align:center; padding:20px; color:#666;'>Loading...</div>";
-            fetchChat();
-            // Mark as read immediately
-            fetch(`${API_URL}?action=markRead&sender=${currentUser.mobile}&receiver=${currentChatPartner.mobile}`);
-            chatInterval = setInterval(fetchChat, 2000);
+        function resetSliderTimer() {
+            clearInterval(slideInterval);
+            slideInterval = setInterval(() => { moveSlide(1); }, 4000);
         }
+        resetSliderTimer(); // Start slider
 
-        async function fetchChat() {
-            if(!currentChatPartner) return;
-            const container = document.getElementById('chatContainer');
-            const res = await fetch(`${API_URL}?action=getChat&sender=${currentUser.mobile}&receiver=${currentChatPartner.mobile}`).then(r => r.json());
+        // --- SECURE ROUTING & NAVIGATION ---
+        function toggleMobileMenu() { document.getElementById('top-nav').classList.toggle('show'); }
+
+        function navigateTo(pageId) {
+            // Auth Guard: Block private routes if not logged in
+            const privatePages = ['admin-dashboard', 'admission-form-view', 'receipt-download-view', 'database-records-view', 'monthly-fee-view'];
+            if (privatePages.includes(pageId) && !checkAuth()) {
+                alert("Restricted Area: Please login to access this panel.");
+                pageId = 'login-section';
+            }
+            // Save current page in session to survive refresh
+            sessionStorage.setItem('currentPage', pageId);
+
+            // UI Switch
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
             
-            if(res.status === 'success') {
-                if(container.innerText.includes("Loading...")) container.innerHTML = "";
-                
-                let html = "";
-                let lastDate = "";
+            // Active Link Update
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active-link');
+                if(btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(pageId)) {
+                    btn.classList.add('active-link');
+                }
+            });
 
-                res.data.forEach(msg => {
-                    // DATE SEPARATOR LOGIC
-                    if(msg.date !== lastDate) {
-                        html += `<div class="date-badge">${msg.date}</div>`;
-                        lastDate = msg.date;
-                    }
+            document.getElementById('top-nav').classList.remove('show');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
-                    const type = (msg.sender == currentUser.mobile) ? 'me' : 'them';
-                    const isReadClass = (msg.status === 'read') ? 'read' : '';
-                    
-                    // Double ticks icon (✓✓)
-                    const ticks = `<span class="ticks"> &#10003;&#10003; </span>`;
+        // --- AUTH LOGIC (LOGIN / LOGOUT) ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPass').value;
+            
+            if(APPS_SCRIPT_URL === "YOUR_WEB_APP_URL_HERE") { alert("Developer Error: Please paste Apps Script URL in HTML."); return; }
 
-                    html += `
-                        <div class="msg ${type} ${isReadClass}">
-                            <span>${msg.text}</span>
-                            <div class="meta">
-                                <span class="time">${msg.time}</span>
-                                ${ticks}
-                            </div>
-                        </div>`;
+            document.getElementById('loginLoader').style.display = 'block';
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'login', email: email, password: pass })
                 });
                 
-                if(container.innerHTML !== html) { 
-                    container.innerHTML = html; 
-                    container.scrollTop = container.scrollHeight; 
-                    
-                    // Trigger read receipt check
-                    fetch(`${API_URL}?action=markRead&sender=${currentUser.mobile}&receiver=${currentChatPartner.mobile}`);
+                const result = await response.json();
+                document.getElementById('loginLoader').style.display = 'none';
+
+                if (result.status === 'success') {
+                    // SECURE UNLOCK WITH SESSION
+                    sessionStorage.setItem('isLoggedIn', 'true');
+                    updateNavUI();
+
+                    // Redirect to Dashboard
+                    document.getElementById('loginEmail').value = '';
+                    document.getElementById('loginPass').value = '';
+                    navigateTo('admin-dashboard');
+
+                } else {
+                    alert("Access Denied: " + result.message);
                 }
+            } catch (err) {
+                document.getElementById('loginLoader').style.display = 'none';
+                alert("Network Error. Please try again.");
             }
         }
 
-        async function sendMsg() {
-            const input = document.getElementById('msgInput');
-            const text = input.value;
-            if(!text) return;
-            const container = document.getElementById('chatContainer');
-            // Optimistic Update (One Gray Tick)
-            container.innerHTML += `<div class="msg me"><div class="text">${text}</div><div class="meta"><span class="time">...</span><span class="ticks" style="display:inline-block">&#10003;</span></div></div>`;
-            container.scrollTop = container.scrollHeight;
-            input.value = "";
-            await fetch(`${API_URL}?action=send&sender=${currentUser.mobile}&receiver=${currentChatPartner.mobile}&text=${encodeURIComponent(text)}`);
-            fetchChat();
+        function logout() {
+            sessionStorage.removeItem('isLoggedIn');
+            sessionStorage.removeItem('currentPage');
+            updateNavUI();
+            alert("Securely logged out.");
+            navigateTo('home');
         }
+
+        // --- ADMISSION & PDF LOGIC ---
+        // Auto Calculate Fees
+        document.querySelectorAll('.fee-input').forEach(input => {
+            input.addEventListener('input', () => {
+                const total = ['adFee', 'bkFee', 'cpFee', 'otFee'].reduce((sum, id) => sum + (parseFloat(document.getElementById(id).value) || 0), 0);
+                document.getElementById('totalFee').value = total;
+            });
+        });
+
+        async function handleAdmissionSubmit(e) {
+            e.preventDefault();
+            if(!checkAuth()) return; // Double protection with Session Storage
+
+            document.getElementById('admLoader').style.display = 'block';
+            const payload = {
+                action: 'admission',
+                studentName: document.getElementById('stuName').value,
+                dob: document.getElementById('stuDob').value,
+                fatherName: document.getElementById('fatName').value,
+                motherName: document.getElementById('motName').value,
+                mobile: document.getElementById('mobile').value,
+                aadhaar: document.getElementById('aadhaar').value,
+                address: document.getElementById('address').value,
+                className: document.getElementById('admClass').value,
+                admissionFee: document.getElementById('adFee').value,
+                bookFee: document.getElementById('bkFee').value,
+                computerFee: document.getElementById('cpFee').value,
+                otherFee: document.getElementById('otFee').value,
+                totalFee: document.getElementById('totalFee').value,
+                paidFee: document.getElementById('paidFee').value
+            };
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await response.json();
+                document.getElementById('admLoader').style.display = 'none';
+
+                if (result.status === 'success') {
+                    alert(`✅ Admission Successful!\nStudent ID: ${result.studentId}\nGenerating PDF Receipt...`);
+                    generatePDFReceipt(payload, result.studentId);
+                    e.target.reset(); document.getElementById('totalFee').value = 0;
+                    navigateTo('admin-dashboard'); // Send back to dashboard
+                } else { alert("Database Error: " + result.message); }
+            } catch (err) {
+                document.getElementById('admLoader').style.display = 'none';
+                alert("Network Error. Data could not be sent.");
+            }
+        }
+
+        // --- SEARCH & DOWNLOAD RECEIPT LOGIC ---
+        async function handleReceiptDownload(e) {
+            e.preventDefault();
+            if(!checkAuth()) return; // Session Storage check
+
+            const searchClass = document.getElementById('searchClass').value;
+            const searchId = document.getElementById('searchId').value;
+            document.getElementById('searchLoader').style.display = 'block';
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'get_student', className: searchClass, studentId: searchId })
+                });
+                
+                const result = await response.json();
+                document.getElementById('searchLoader').style.display = 'none';
+
+                if (result.status === 'success') {
+                    generatePDFReceipt(result.data, searchId);
+                    alert("Receipt Found & Downloaded Successfully!");
+                    e.target.reset(); 
+                } else {
+                    alert("Not Found: " + result.message);
+                }
+            } catch (err) {
+                document.getElementById('searchLoader').style.display = 'none';
+                alert("Network Error. Please try again.");
+            }
+        }
+
+        function generatePDFReceipt(data, id) {
+            const doc = new window.jspdf.jsPDF();
+            doc.setFontSize(24); doc.setTextColor(12, 59, 94);
+            doc.text("Dr. APJ ABDUL KALAM J.B.", 105, 20, null, null, "center");
+            doc.setFontSize(10); doc.setTextColor(100);
+            doc.text("Santi Chowk (Sirajuli), Sonitpur (Assm) - 17 | +91 88227 78233", 105, 28, null, null, "center");
+            doc.setDrawColor(12, 59, 94); doc.setLineWidth(0.5); doc.line(14, 35, 196, 35);
+            doc.setFontSize(16); doc.setTextColor(0); doc.setFont("helvetica", "bold");
+            doc.text("OFFICIAL ADMISSION RECEIPT", 105, 45, null, null, "center");
+            
+            doc.setFontSize(11); doc.setFont("helvetica", "normal");
+            doc.text(`Date: ${new Date().toLocaleDateString('en-GB')}`, 14, 55);
+            doc.setFont("helvetica", "bold"); doc.text(`Student ID: ${id}`, 140, 55);
+
+            doc.autoTable({
+                startY: 60, theme: 'grid', headStyles: { fillColor: [12, 59, 94] },
+                head: [['Student Information', '']],
+                body: [
+                    ['Student Name:', data.studentName], ['Admission Class:', data.className],
+                    ['Date of Birth:', data.dob], ["Father's Name:", data.fatherName],
+                    ["Mother's Name:", data.motherName], ['Parent Mobile No.:', data.mobile]
+                ], columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } }
+            });
+
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 10, theme: 'grid', headStyles: { fillColor: [12, 59, 94] },
+                head: [['Fee Particulars', 'Amount (Rs.)']],
+                body: [
+                    ['Admission Fee', `Rs. ${data.admissionFee}`], ['Book Fee', `Rs. ${data.bookFee}`],
+                    ['Computer Fee', `Rs. ${data.computerFee}`], ['Other Fee', `Rs. ${data.otherFee}`],
+                    [{content: 'Total Fee', styles: {fontStyle: 'bold'}}, {content: `Rs. ${data.totalFee}`, styles: {fontStyle: 'bold'}}],
+                    [{content: 'Amount Paid', styles: {fontStyle: 'bold', textColor: [0, 128, 0]}}, {content: `Rs. ${data.paidFee}`, styles: {fontStyle: 'bold', textColor: [0, 128, 0]}}]
+                ]
+            });
+
+            const finalY = doc.lastAutoTable.finalY + 30;
+            doc.setFont("helvetica", "normal");
+            doc.text("_______________________", 20, finalY); doc.text("Parent Signature", 20, finalY + 5);
+            doc.text("_______________________", 140, finalY); doc.text("Authorized Signatory", 145, finalY + 5);
+            doc.save(`SA_Khan_Receipt_${id}.pdf`);
+        }
+
+        // --- INITIALIZE UI ON PAGE LOAD / REFRESH ---
+        window.onload = () => {
+            updateNavUI();
+            
+            const savedPage = sessionStorage.getItem('currentPage') || 'home';
+            const privatePages = ['admin-dashboard', 'admission-form-view', 'receipt-download-view', 'database-records-view', 'monthly-fee-view'];
+            
+            if (privatePages.includes(savedPage) && !checkAuth()) {
+                navigateTo('home');
+            } else {
+                navigateTo(savedPage);
+            }
+        };
+
+        // --- FETCH DATABASE RECORDS LOGIC ---
+        async function handleFetchRecords(e) {
+            e.preventDefault();
+            if(!checkAuth()) return;
+
+            const viewClass = document.getElementById('viewClass').value;
+            document.getElementById('dbLoader').style.display = 'block';
+            document.getElementById('table-container').style.display = 'none';
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'get_all_students', className: viewClass })
+                });
+                
+                const result = await response.json();
+                document.getElementById('dbLoader').style.display = 'none';
+
+                if (result.status === 'success') {
+                    const tbody = document.getElementById('studentTableBody');
+                    tbody.innerHTML = '';
+
+                    if (result.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No students found in this class.</td></tr>';
+                    } else {
+                        result.data.forEach(student => {
+                            const due = parseFloat(student.totalFee) - parseFloat(student.paidFee);
+                            const statusHtml = due <= 0 
+                                ? `<span class="status-badge status-paid">Clear</span>` 
+                                : `<span class="status-badge status-due">Due: ₹${due}</span>`;
+
+                            const row = `<tr>
+                                <td>${student.date}</td>
+                                <td><strong>${student.id}</strong></td>
+                                <td>${student.name}</td>
+                                <td>${student.mobile}</td>
+                                <td>₹${student.totalFee}</td>
+                                <td>₹${student.paidFee}</td>
+                                <td>${statusHtml}</td>
+                            </tr>`;
+                            tbody.innerHTML += row;
+                        });
+                    }
+                    document.getElementById('table-container').style.display = 'block';
+                } else {
+                    alert("Notice: " + result.message);
+                }
+            } catch (err) {
+                document.getElementById('dbLoader').style.display = 'none';
+                alert("Network Error. Please try again.");
+            }
+        }
+
+        // --- FEE SEARCH & PAYMENT LOGIC ---
+        let currentStudentData = null;
+
+        async function handleFeeSearch(e) {
+            e.preventDefault();
+            if(!checkAuth()) return;
+            
+            const className = document.getElementById('feeClass').value;
+            const studentId = document.getElementById('feeStudentId').value;
+            
+            document.getElementById('feeLoader').style.display = 'block';
+            document.getElementById('receiptPreview').style.display = 'none';
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'get_fee_details', className: className, studentId: studentId }) });
+                const result = await response.json();
+                document.getElementById('feeLoader').style.display = 'none';
+
+                if (result.status === 'success') {
+                    currentStudentData = result.data;
+                    currentStudentData.studentId = studentId;
+                    currentStudentData.className = className;
+                    
+                    document.getElementById('prevName').innerText = result.data.name;
+                    document.getElementById('prevParent').innerText = result.data.fatherName;
+                    document.getElementById('prevClassId').innerText = className + " | ID: " + studentId;
+                    
+                    document.getElementById('prevAdTotal').innerText = "Rs. " + result.data.admissionTotal;
+                    let breakdownHtml = "";
+                    result.data.breakdown.forEach(b => {
+                        breakdownHtml += `<div class="preview-row"><span>${b.month} Due Fee:</span> <strong>Rs. ${b.amount}</strong></div>`;
+                    });
+                    document.getElementById('prevMonthsBreakdown').innerHTML = breakdownHtml; 
+                    
+                    document.getElementById('prevPaidSoFar').innerText = "Rs. " + result.data.totalPaidSoFar;
+                    document.getElementById('prevTotalDue').innerText = "Rs. " + result.data.currentRemainingDue;
+                    document.getElementById('feeRowIndex').value = result.data.rowIndex;
+                    
+                    document.getElementById('feeAmountReceived').value = '';
+                    document.getElementById('prevIndexedDue').innerText = "Rs. " + result.data.currentRemainingDue;
+                    
+                    document.getElementById('receiptPreview').style.display = 'block'; 
+                } else {
+                    alert("Not Found: " + result.message);
+                }
+            } catch (err) {
+                document.getElementById('feeLoader').style.display = 'none';
+                alert("Network Error.");
+            }
+        }
+
+        function calculateIndexedDue() {
+            const received = parseFloat(document.getElementById('feeAmountReceived').value) || 0;
+            const totalDue = currentStudentData.currentRemainingDue;
+            let indexed = totalDue - received;
+            if(indexed < 0) indexed = 0;
+            document.getElementById('prevIndexedDue').innerText = "Rs. " + indexed; 
+        }
+
+        async function processFeePayment(e) {
+            e.preventDefault();
+            if(!checkAuth() || !currentStudentData) return;
+            
+            const amountPaid = document.getElementById('feeAmountReceived').value;
+            document.getElementById('gpayOverlay').style.display = 'flex'; 
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ action: 'pay_fee', className: currentStudentData.className, rowIndex: currentStudentData.rowIndex, amountPaid: amountPaid }) 
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    setTimeout(() => {
+                        generateMonthlyFeePDF(currentStudentData, amountPaid, result.totalPaidNow);
+                        document.getElementById('gpayOverlay').style.display = 'none';
+                        document.getElementById('receiptPreview').style.display = 'none';
+                        document.getElementById('feeAmountReceived').value = '';
+                    }, 2500); 
+                }
+            } catch (err) {
+                document.getElementById('gpayOverlay').style.display = 'none';
+                alert("Payment Failed. Network Error.");
+            }
+        }
+
+        function generateMonthlyFeePDF(data, amountPaid, newTotalPaid) {
+            const doc = new window.jspdf.jsPDF();
+            doc.setFontSize(24); doc.setTextColor(12, 59, 94);
+            doc.text("Dr. APJ ABDUL KALAM J.B.", 105, 20, null, null, "center"); 
+            doc.setFontSize(10); doc.setTextColor(100);
+            doc.text("Santi Chowk (Sirajuli), Sonitpur (Assm) - 17", 105, 28, null, null, "center");
+            doc.setDrawColor(12, 59, 94); doc.setLineWidth(0.5); doc.line(14, 35, 196, 35);
+            
+            doc.setFontSize(16); doc.setTextColor(0); doc.setFont("helvetica", "bold");
+            doc.text("MONTHLY FEE RECEIPT", 105, 45, null, null, "center");
+            
+            doc.setFontSize(11); doc.setFont("helvetica", "normal");
+            doc.text(`Date: ${new Date().toLocaleDateString('en-GB')}`, 14, 55);
+            doc.setFont("helvetica", "bold"); doc.text(`Student ID: ${data.studentId}`, 140, 55);
+
+            doc.autoTable({
+                startY: 60, theme: 'grid', headStyles: { fillColor: [12, 59, 94] },
+                head: [['Section A - Student Details', '']],
+                body: [
+                    ['Student Name:', data.name],
+                    ["Parents Name:", data.fatherName],
+                    ['Class & Student ID:', `${data.className} | ID: ${data.studentId}`]
+                ]
+            });
+
+            let feeBody = [['Admission Due Fee', `Rs. ${data.admissionTotal}`]];
+            data.breakdown.forEach(b => {
+                feeBody.push([`${b.month} Due Fee`, `Rs. ${b.amount}`]);
+            });
+            feeBody.push([{content: 'Total Due Fee', styles: {fontStyle: 'bold'}}, {content: `Rs. ${data.grandTotalDue}`, styles: {fontStyle: 'bold'}}]);
+            feeBody.push([{content: 'Total Amount Received Today', styles: {fontStyle: 'bold', textColor: [0, 128, 0]}}, {content: `Rs. ${amountPaid}`, styles: {fontStyle: 'bold', textColor: [0, 128, 0]}}]);
+            
+            let indexedDue = data.grandTotalDue - newTotalPaid;
+            feeBody.push([{content: 'Automatic Total Due Fee Indexed', styles: {fontStyle: 'bold', textColor: [200, 0, 0]}}, {content: `Rs. ${indexedDue < 0 ? 0 : indexedDue}`, styles: {fontStyle: 'bold', textColor: [200, 0, 0]}}]); 
+
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 10, theme: 'grid', headStyles: { fillColor: [12, 59, 94] },
+                head: [['Section B - Fee Structure', 'Amount']],
+                body: feeBody
+            });
+
+            const finalY = doc.lastAutoTable.finalY + 30;
+            doc.setFont("helvetica", "normal");
+            doc.text("_______________________", 20, finalY); doc.text("Parents Signature", 20, finalY + 5); 
+            doc.text("_______________________", 140, finalY); doc.text("Authorized Signature", 145, finalY + 5); 
+            doc.save(`Fee_Receipt_${data.studentId}_${new Date().getTime()}.pdf`);
+        }
+
+        // ========================================== 
+// ANIMATED COUNTERS LOGIC (JAVASCRIPT)
+// ========================================== 
+const counters = document.querySelectorAll('.counter');
+const speed = 100; // Animation speed control (Kam number = zyada speed)
+
+const animateCounters = () => {
+    counters.forEach(counter => {
+        const updateCount = () => {
+            const target = +counter.getAttribute('data-target');
+            const count = +counter.innerText;
+            // Target ke hisaab se speed calculate karo
+            const inc = target / speed;
+
+            if (count < target) {
+                counter.innerText = Math.ceil(count + inc);
+                setTimeout(updateCount, 30); // Har 30ms mein number badhega
+            } else {
+                counter.innerText = target; // Target cross na ho uske liye
+            }
+        };
+        updateCount();
+    });
+};
+
+// Scroll Observer: Jab user scroll karke is section par aayega tabhi counter start hoga
+const statsSection = document.querySelector('.stats-section');
+if(statsSection) {
+    const observer = new IntersectionObserver((entries) => {
+        if(entries[0].isIntersecting) {
+            animateCounters();
+            observer.disconnect(); // Ek baar 100% ho jaye toh animation rok do
+        }
+    }, { threshold: 0.5 }); // Jab 50% section screen par dikhega tab trigger hoga
+    
+    observer.observe(statsSection);
+}
+// ==========================================
     </script>
 </body>
 </html>
